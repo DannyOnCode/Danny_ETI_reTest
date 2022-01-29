@@ -17,43 +17,7 @@ type BusStopInfo struct{
 
 var busStops map[string]BusStopInfo
 
-func busStop(w http.ResponseWriter, r *http.Request){
-
-	if r.Method == "GET" {
-		params := mux.Vars(r)
-        busCode := params["busStopCode"]
-        if busCode == "" {
-            w.WriteHeader(http.StatusBadRequest)
-            w.Write([]byte("400 - No Bus Code was provided"))
-            return
-        }
-        // check if code exists
-        if _, ok := busStops[busCode]; ok {
-			retrievedBusStop := busStops[busCode]
-            json.NewEncoder(w).Encode(retrievedBusStop)
-        } else {
-            w.WriteHeader(http.StatusNotFound)
-        }
-    } 
-	if r.Method == "DELETE" {
-		params := mux.Vars(r)
-		busCode := params["busStopCode"]
-		if busCode == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("404 - No Bus Code was provided"))
-			return
-		}
-		// check if code exists
-		if _, ok := busStops[busCode]; ok {
-			delete(busStops, busCode)
-			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte("200 - BusStop Deleted: " + 
-			busCode))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-    }
-
+func busStopv2(w http.ResponseWriter, r *http.Request){
 	if r.Header.Get("Content-type") == "application/json" {
 		var newBusStop BusStopInfo
 		reqBody, err := ioutil.ReadAll(r.Body)
@@ -72,6 +36,7 @@ func busStop(w http.ResponseWriter, r *http.Request){
 				if _, ok := busStops[newBusStop.BusStopCode]; !ok{
 					busStops[newBusStop.BusStopCode] = newBusStop
 					w.WriteHeader(http.StatusCreated)
+					fmt.Println("Added")
                     w.Write([]byte("201 - BusStop added: " + 
 					newBusStop.BusStopCode))
 
@@ -81,20 +46,6 @@ func busStop(w http.ResponseWriter, r *http.Request){
                         "409 - Duplicate busStop code"))
 				}
 
-			}
-			if r.Method == "PUT"{
-				if _,ok := busStops[newBusStop.BusStopCode]; !ok{
-					busStops[newBusStop.BusStopCode] = newBusStop
-					w.WriteHeader(http.StatusCreated)
-                    w.Write([]byte("201 - Bus Stop added: " + 
-					newBusStop.BusStopCode))
-				} else{
-					busStops[newBusStop.BusStopCode] = newBusStop
-                    w.WriteHeader(http.StatusAccepted)
-					w.Write([]byte("202 -  Bus Stop updated: " +
-					newBusStop.BusStopCode))
-
-				}
 			}
 		}else{
 			w.WriteHeader(
@@ -107,10 +58,33 @@ func busStop(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+func busStopv1(w http.ResponseWriter, r *http.Request){
+	if r.Method == "DELETE" {
+		params := mux.Vars(r)
+		busCode := params["busStopCode"]
+		if busCode == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("404 - No Bus Code was provided"))
+			return
+		}
+		// check if code exists
+		if _, ok := busStops[busCode]; ok {
+			delete(busStops, busCode)
+			w.WriteHeader(http.StatusCreated)
+			fmt.Println("Added")
+			w.Write([]byte("200 - BusStop Deleted: " + 
+			busCode))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+    }
+}
+
 func main(){
 	busStops = make(map[string]BusStopInfo)
 	router := mux.NewRouter()
-	router.HandleFunc("/v1/BusStops/{busStopCode}",busStop).Methods("GET","PUT", "POST","DELETE")
-	fmt.Println("Listening at port 5040")
-	log.Fatal(http.ListenAndServe(":5040", router))
+	router.HandleFunc("/v2/BusStops/{busStopCode}",busStopv2).Methods("POST")
+	router.HandleFunc("/v1/BusStops/{busStopCode}",busStopv1).Methods("DELETE")
+	fmt.Println("Listening at port 8082")
+	log.Fatal(http.ListenAndServe(":8082", router))
 }

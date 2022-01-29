@@ -12,6 +12,6 @@ COPY *.go ./
 
 RUN go build -o /Danny_Practical
 
-EXPOSE 5040
+EXPOSE 8082
 
 CMD ["/Danny_Practical"]
